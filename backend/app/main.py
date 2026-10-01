@@ -37,7 +37,7 @@ def health() -> dict:
 @app.get("/api/stocks")
 def list_stocks() -> list[dict]:
     tickers = data.load_tickers()
-    quotes = data.fetch_quotes(tickers["ticker"].tolist())
+    quotes = data.get_quotes(tuple(tickers["ticker"]))
     return [
         {
             "ticker": row.ticker,

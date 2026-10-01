@@ -9,6 +9,8 @@ from pathlib import Path
 import pandas as pd
 import yfinance as yf
 
+from app.cache import PRICE_TTL, cached
+
 logger = logging.getLogger(__name__)
 
 TICKERS_PATH = Path(__file__).resolve().parent.parent / "data" / "tickers.csv"
@@ -101,3 +103,12 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
             logger.warning("No price data for %s", symbol)
         quotes[ticker] = {"price": price, "change_pct": change_pct, **infos[symbol]}
     return quotes
+
+
+def _has_prices(quotes: dict[str, dict]) -> bool:
+    return any(q["price"] is not None for q in quotes.values())
+
+
+@cached(PRICE_TTL, is_valid=_has_prices)
+def get_quotes(tickers: tuple[str, ...]) -> dict[str, dict]:
+    return fetch_quotes(list(tickers))
