@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 import yfinance as yf
 
-from app.cache import PRICE_TTL, cached
+from app.cache import FUNDAMENTALS_TTL, PRICE_TTL, cached
 
 logger = logging.getLogger(__name__)
 
@@ -112,3 +112,54 @@ def _has_prices(quotes: dict[str, dict]) -> bool:
 @cached(PRICE_TTL, is_valid=_has_prices)
 def get_quotes(tickers: tuple[str, ...]) -> dict[str, dict]:
     return fetch_quotes(list(tickers))
+
+
+def _not_empty(frame: pd.DataFrame) -> bool:
+    return not frame.empty
+
+
+@cached(PRICE_TTL, is_valid=_not_empty)
+def get_price_history(ticker: str) -> pd.DataFrame:
+    """Full daily OHLC history with 'Close' and 'Adj Close', indexed by tz-naive date.
+
+    The whole history is fetched once and sliced per request, so moving averages
+    have enough lookback at the start of any period.
+    """
+    symbol = to_symbol(ticker)
+    try:
+        prices = yf.Ticker(symbol).history(period="max", auto_adjust=False, actions=False)
+    except Exception:
+        logger.exception("History download failed for %s", symbol)
+        return pd.DataFrame()
+    if prices.empty:
+        logger.warning("No history for %s", symbol)
+        return prices
+    if prices.index.tz is not None:
+        prices.index = prices.index.tz_localize(None)
+    prices.index = prices.index.normalize()
+    return prices[~prices.index.duplicated(keep="last")].sort_index()
+
+
+@cached(FUNDAMENTALS_TTL, is_valid=bool)
+def get_info(ticker: str) -> dict:
+    symbol = to_symbol(ticker)
+    try:
+        return yf.Ticker(symbol).info or {}
+    except Exception:
+        logger.exception("Info download failed for %s", symbol)
+        return {}
+
+
+@cached(FUNDAMENTALS_TTL, is_valid=lambda rate: rate is not None)
+def get_fx_rate(from_currency: str | None, to_currency: str | None) -> float | None:
+    """Rate converting one unit of `from_currency` into `to_currency`."""
+    if not from_currency or not to_currency:
+        return None
+    if from_currency == to_currency:
+        return 1.0
+    symbol = f"{from_currency}{to_currency}=X"
+    try:
+        return clean(yf.Ticker(symbol).fast_info["lastPrice"])
+    except Exception:
+        logger.exception("FX rate download failed for %s", symbol)
+        return None

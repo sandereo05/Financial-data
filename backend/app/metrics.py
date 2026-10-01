@@ -139,3 +139,42 @@ def fundamental_metrics(info: dict, fx_rate: float | None) -> dict:
         "roe_pct": _percent(info.get("returnOnEquity")),
         "debt_to_equity": None if debt_to_equity is None else debt_to_equity / 100,
     }
+
+
+PERIODS = {
+    "1m": pd.DateOffset(months=1),
+    "6m": pd.DateOffset(months=6),
+    "1y": pd.DateOffset(years=1),
+    "5y": pd.DateOffset(years=5),
+    "max": None,
+}
+# Long periods are downsampled to weekly closes to keep responses small.
+WEEKLY_PERIODS = {"5y", "max"}
+
+
+def history_points(prices: pd.DataFrame, period: str) -> list[dict]:
+    """Closes with 50/200-day moving averages for the requested period.
+
+    Moving averages are computed on the full daily history before slicing so
+    they are defined from the first point of the period.
+    """
+    if prices.empty:
+        return []
+    closes = prices["Close"].dropna()
+    frame = pd.DataFrame(
+        {
+            "close": closes,
+            "sma_50": moving_average(closes, 50),
+            "sma_200": moving_average(closes, 200),
+        }
+    )
+    offset = PERIODS[period]
+    if offset is not None:
+        frame = frame[frame.index >= frame.index[-1] - offset]
+    if period in WEEKLY_PERIODS:
+        # Keep each week's last actual trading day rather than the bin label.
+        frame = frame.groupby(pd.Grouper(freq="W-FRI")).tail(1)
+    return [
+        {"date": date.date().isoformat(), **{key: clean(value) for key, value in row.items()}}
+        for date, row in frame.iterrows()
+    ]

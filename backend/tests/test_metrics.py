@@ -110,3 +110,26 @@ def test_fundamental_metrics_handles_missing_values():
     assert (
         metrics.fundamental_metrics({"ebitda": 1, "enterpriseValue": 2}, None)["ev_ebitda"] is None
     )
+
+
+def test_history_points_slices_after_computing_moving_averages():
+    closes = series(range(1, 401))
+    points = metrics.history_points(ohlc(closes), "1m")
+    assert 19 <= len(points) <= 24
+    assert points[-1]["close"] == 400
+    assert points[0]["sma_200"] is not None
+    assert points[-1]["date"] == closes.index[-1].date().isoformat()
+
+
+def test_history_points_weekly_for_long_periods():
+    closes = series(range(1, 401))
+    closes = closes.iloc[:-1]  # end mid-week, not on a Friday
+    points = metrics.history_points(ohlc(closes), "max")
+    assert len(points) in (79, 80, 81)
+    assert points[-1]["date"] == closes.index[-1].date().isoformat()
+    assert points[0]["sma_50"] is None
+    assert points[-1]["close"] == 399
+
+
+def test_history_points_empty():
+    assert metrics.history_points(pd.DataFrame(), "1y") == []
