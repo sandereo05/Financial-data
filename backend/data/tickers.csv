@@ -1,0 +1,27 @@
+# OBX constituents (approximate). Review against Euronext when the index is rebalanced.
+ticker,name,sector
+EQNR,Equinor,Energi
+AKRBP,Aker BP,Energi
+VAR,Vår Energi,Energi
+SUBC,Subsea 7,Energi
+TGS,TGS,Energi
+DNB,DNB Bank,Finans
+GJF,Gjensidige Forsikring,Finans
+STB,Storebrand,Finans
+TEL,Telenor,Telekom
+MOWI,Mowi,Sjømat
+SALM,SalMar,Sjømat
+BAKKA,Bakkafrost,Sjømat
+NHY,Norsk Hydro,Materialer
+YAR,Yara International,Materialer
+ORK,Orkla,Forbruksvarer
+KOG,Kongsberg Gruppen,Industri
+TOM,Tomra Systems,Industri
+AUTO,AutoStore,Industri
+NAS,Norwegian Air Shuttle,Industri
+NOD,Nordic Semiconductor,Teknologi
+KIT,Kitron,Teknologi
+SCATC,Scatec,Kraft
+FRO,Frontline,Shipping
+HAFNI,Hafnia,Shipping
+VEND,Vend Marketplaces,Media
